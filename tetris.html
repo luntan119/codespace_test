@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>俄罗斯方块</title>
+<style>
+body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#222;font-family:Arial;flex-direction:column}
+#board{display:grid;grid-template-columns:repeat(10,30px);gap:1px;background:#111;padding:2px}
+.cell{width:30px;height:30px;background:#333}
+.cell.filled{background:#4af}
+#score{color:#fff;margin:10px;font-size:20px}
+</style>
+</head>
+<body>
+<div id="score">得分: 0 | 方向键移动，↑旋转，空格下落</div>
+<div id="board"></div>
+<script>
+const W=10,H=20,B=Array(H).fill().map(()=>Array(W).fill(0));
+const shapes=[
+[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[1,1,0],[0,1,1]],
+[[0,1,1],[1,1,0]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]]
+];
+let score=0,piece,x,y,game;
+
+function draw(){
+  document.getElementById('board').innerHTML=B.map((row,i)=>
+    row.map((v,j)=>{
+      let filled=v;
+      if(piece&&y<=i&&i<y+piece.length&&x<=j&&j<x+piece[0].length)
+        filled|=piece[i-y][j-x];
+      return`<div class="cell${filled?' filled':''}"></div>`
+    }).join('')
+  ).join('');
+  document.getElementById('score').innerText=`得分: ${score} | 方向键移动，↑旋转，空格下落`;
+}
+
+function collide(p,nx,ny){
+  for(let i=0;i<p.length;i++)
+    for(let j=0;j<p[0].length;j++)
+      if(p[i][j]&&(ny+i>=H||nx+j<0||nx+j>=W||(B[ny+i]&&B[ny+i][nx+j])))
+        return 1;
+  return 0;
+}
+
+function merge(){
+  for(let i=0;i<piece.length;i++)
+    for(let j=0;j<piece[0].length;j++)
+      if(piece[i][j])B[y+i][x+j]=1;
+}
+
+function rotate(p){
+  const n=p[0].length,m=p.length;
+  return Array(n).fill().map((_,i)=>Array(m).fill().map((_,j)=>p[m-1-j][i]));
+}
+
+function clearLines(){
+  let cleared=0;
+  for(let i=H-1;i>=0;i--)
+    if(B[i].every(v=>v)){B.splice(i,1);B.unshift(Array(W).fill(0));cleared++;i++}
+  score+=cleared*100;
+}
+
+function newPiece(){
+  piece=shapes[Math.random()*shapes.length|0];x=W/2-1|0;y=0;
+  if(collide(piece,x,y)){clearInterval(game);alert('游戏结束! 得分:'+score);location.reload()}
+}
+
+function tick(){
+  if(!collide(piece,x,y+1))y++;
+  else{merge();clearLines();newPiece()}
+  draw();
+}
+
+document.onkeydown=e=>{
+  if(!piece)return;
+  if(e.key=='ArrowLeft'&&!collide(piece,x-1,y))x--;
+  else if(e.key=='ArrowRight'&&!collide(piece,x+1,y))x++;
+  else if(e.key=='ArrowDown'&&!collide(piece,x,y+1))y++;
+  else if(e.key=='ArrowUp'){const r=rotate(piece);if(!collide(r,x,y))piece=r}
+  else if(e.key==' '){while(!collide(piece,x,y+1))y++;tick();return}
+  draw();
+};
+
+newPiece();draw();game=setInterval(tick,500);
+</script>
+</body>
+</html>
